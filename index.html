@@ -1,0 +1,166 @@
+<HTML>
+	<HEAD>
+		<title>Newspaper List</title>
+	</HEAD>
+	
+	<body>
+		<script>
+			function viewXML(url) {
+				// console.log(url);
+				try {
+					//debugger;
+					if (url.trim() == "") throw 'Please enter a xml file.';
+					xmlDoc = loadXML(url);
+					if (window.ActiveXObject) {						
+						if (xmlDoc.parseError.errorCode != 0) {
+							throw 'Error in XML file';
+						} else {
+							html_text = generateHTML(xmlDoc);
+							hwin = window.open("", "Assignment4", "height=800,width=800,scrollbars=yes");
+							hwin.document.close();
+						}
+					} else {
+						html_text = generateHTML(xmlDoc);
+						hwin = window.open("", "Assignment4", "height=800,width=800,scrollbars=yes");
+						hwin.document.write(html_text);
+						hwin.document.close();
+					}
+				} catch (err) {
+					window.alert(err);
+				}
+			}
+
+			function loadXML(url) {
+				var xmlhttp;
+				if (window.XMLHttpRequest) {
+					// code for IE7+, Firefox, Chrome, Opera, Safari
+					xmlhttp = new XMLHttpRequest();
+				} else {
+					//code for IE6, IE5
+					xmlhttp = ActiveXObject("Microsoft.XMLHTTP");
+				}
+
+				xmlhttp.open("GET", url, false);
+				xmlhttp.send();
+				console.log("after send", xmlhttp.status);
+
+				if (xmlhttp.status == 404) {
+					throw 'File not found error';
+
+				} else if (xmlhttp.status != 200) {
+					throw 'Cannot load file';
+				}
+
+				xmlDoc = xmlhttp.responseXML;
+
+				if (xmlDoc == null) {
+					throw 'Error in XML file';
+				}
+
+				errors = xmlDoc.getElementsByTagName("parsererror");
+				if (errors.length > 0) {
+					throw 'Error in XML file';
+				}
+
+				return xmlDoc;
+			}
+
+			function generateHTML(xmlDoc) {
+				ELEMENT_NODE = 1;
+				TEXT_NODE = 3;
+
+				// MS parser doesn't define Node.ELEMENT_NODE
+				root = xmlDoc.DocumentElement;
+
+				html_text = "<html><head><title>XML Parse Result</title></head>";
+
+				html_text += "<body><table border='2'>";
+
+				// process table header
+				headers = xmlDoc.getElementsByTagName("Header");
+				headerNodes = headers.item(0).childNodes;
+				html_text += "<tr>";
+				for ( i = 0; i < headerNodes.length; i++) {
+					if (headerNodes.item(i).nodeType == ELEMENT_NODE) {
+						headerNode = headerNodes.item(i);
+						html_text += "<th>" + headerNode.textContent + "</th>";
+					}
+				}
+				html_text += "</tr>";
+
+				//process table body
+				rows = xmlDoc.getElementsByTagName("Row");
+				if (rows.length == 0) {
+					throw "No <Row> in XML file";
+				}
+
+				for ( i = 0; i < rows.length; i++) {
+					if (rows.item(i).nodeType == ELEMENT_NODE) {
+						newspaper = rows.item(i);
+						newspaperNodes = newspaper.childNodes;
+
+						//process each row
+						html_text += "<tr>";
+						for ( j = 0; j < newspaperNodes.length; j++) {
+							if (newspaperNodes.item(j).nodeType == ELEMENT_NODE) {
+								node = newspaperNodes.item(j);
+								if (node.nodeName == "Location") {
+									//handle location
+									locations = node.childNodes;
+									html_text += "<td valign=\"middle\">";
+									for ( k = 0; k < locations.length; k++) {
+										if (locations.item(k).nodeType == ELEMENT_NODE) {
+											firstChild = locations.item(k).firstChild;
+											//handle the case when '<city></city>' or '<city>   </city>'
+											if (firstChild != null && firstChild.nodeValue.trim() != "") {
+												html_text += "<ul><li>" + locations.item(k).firstChild.nodeValue + "</li></ul>";
+											}
+										} else if (locations.item(k).nodeType == TEXT_NODE && locations.length == 1) {
+											// handle the case when '<location>xxx</location>'
+											value = locations.item(k).nodeValue;
+											if (value != null && value.trim() != "") {
+												html_text += "<ul><li>" + locations.item(k).nodeValue + "</li></ul>";
+											}
+										}
+									}
+									html_text += "</td>";
+								} else if (node.nodeName == "HomePage") {
+									//handle homepage
+									value = node.firstChild == null ? "" : node.firstChild.nodeValue;
+									html_text += "<td><a href='" + value + "'> " + value + "</a></td>";
+								} else if (node.nodeName == "Logo") {
+									//handle images separately
+									if (node.firstChild == null) {
+										html_text += "<td></td>";
+									} else {
+										html_text += "<td><img src='" + node.firstChild.nodeValue + "' width='" + 120 + "' height='" + 100 + "'></td>";
+									}
+								} else {
+									value = node.firstChild == null ? "" : node.firstChild.nodeValue;
+									html_text += "<td>" + value + "</td>";
+								}
+							}
+						}
+						html_text += "</tr>";
+					}
+				}
+				html_text += "</table>";
+				html_text += "<NOSCRIPT></body></html>";
+				return html_text;
+			}
+		</script>
+
+		<div style="width:100%; text-align:center">
+		<h1>Enter URL for Newspaper List XML File </h1>
+		<form name="myform" method="post" id="location" style="margin:0 auto">
+			<input type="text" name="url" maxlength="255" size="100" />
+			<br />
+			<br />
+			<button onClick="viewXML(this.form.url.value)"  style="background-color: rgb(200,200,200); border-radius: 4px; box-shadow: none">
+				Submit Query
+			</button>
+		</form>
+		</div>
+		<NOSCRIPT>
+	</body>
+</html>
